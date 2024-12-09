@@ -20,16 +20,43 @@ public class UserController {
 
 
     @PostMapping("/user-registration")
-    public ResponseEntity<TSException> userRegister(@Valid @RequestBody UserResources userResources){
-        TSException tsException = new TSException();
+    public ResponseEntity<String> userRegister(@Valid @RequestBody UserResources userResources) {
+        try {
+            // Validate username
+            Optional<UserDetails> existingUser = Optional.ofNullable(userDao.findByUsername(userResources.getUsername()));
+            if (existingUser.isPresent()) {
+                throw new TSException("USER_EXISTS", "Username already exists", "The username provided is already in use.");
+            }
 
-        Optional<UserDetails> exsistingUser= Optional.ofNullable(userDao.findByUsername(userResources.getUserName()));
-//        Optional<UserDetails> exsistingUser= Optional.ofNullable(userDao.findbyNic(userResources.getNic()));
-//        if (exsistingUser.isPresent()){
-//            ;
-//       }
+            // Validate fields
+            if (userResources.getUsername() == null || userResources.getUsername().isEmpty()) {
+                throw new TSException("INVALID_FIELD", "Username is required", "The username field cannot be null or empty.");
+            }try {
+                // Validate username
+                Optional<UserDetails> existingUserNid = Optional.ofNullable(userDao.findbyNic(userResources.getNic()));
+                if (existingUserNid.isPresent()) {
+                    throw new TSException("USER_EXISTS", "User NID already exists", "The user NID provided is already in use.");
+                }
 
-        UserResources saveUser = userService.registerUser(userResources);
-        return ResponseEntity.ok(tsException);
+                // Validate fields
+                if (userResources.getNic() == null || userResources.getNic().isEmpty()) {
+                    throw new TSException("INVALID_FIELD", "User NID is required", "The user NID field cannot be null or empty.");
+                }
+
+            } catch (TSException e) {
+                // Handle the exception and return a meaningful response
+                return ResponseEntity.badRequest().body("Error: " + e.getErrorMessage() + " - " + e.getErrorDetail());
+            }
+
+            // If no errors, proceed with registration
+            userService.registerUser(userResources);
+
+            // Send a successful response
+            return ResponseEntity.ok("User registered successfully!");
+        } catch (TSException e) {
+            // Handle the exception and return a meaningful response
+            return ResponseEntity.badRequest().body("Error: " + e.getErrorMessage() + " - " + e.getErrorDetail());
+        }
     }
+
 }
